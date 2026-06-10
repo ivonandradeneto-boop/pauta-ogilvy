@@ -479,7 +479,27 @@ function renderChart(){
     const capEfetiva=Math.round(CAPACITY*capFator);
     const pEfetivo=capEfetiva>0?c.pts/capEfetiva:1;
     const overEf=c.pts>capEfetiva;
-    const ausTag=capFator<1?'<span class="tag-aus">⛔'+(capFator===0?'fora':'parcial')+'</span>':'';
+    /* Monta tag com nome e tipo de cada pessoa ausente da dupla */
+    const today=new Date();today.setHours(0,0,0,0);
+    const fimSemana=new Date(today);fimSemana.setDate(today.getDate()+7);
+    const pessoasDupla=pPersons(d);
+    const ausTagParts=[];
+    pessoasDupla.forEach(p=>{
+      AUSENCIAS.forEach(a=>{
+        if(!a.pessoa||!a.dataInicio||!a.dataFim) return;
+        if(!a.pessoa.toLowerCase().includes(p.toLowerCase())&&
+           !p.toLowerCase().includes(a.pessoa.toLowerCase())) return;
+        const ini=pDate(a.dataInicio); const fim=pDate(a.dataFim);
+        if(!ini||!fim) return;
+        if(ini<=fimSemana&&fim>=today){
+          const tipo=(a.tipo||'ausente').toLowerCase();
+          const emoji=tipo.includes('férias')||tipo.includes('ferias')?'🌴':
+                      tipo.includes('folga')||tipo.includes('banco')?'🌴':'⛔';
+          ausTagParts.push(emoji+' '+p+' · '+a.tipo);
+        }
+      });
+    });
+    const ausTag=ausTagParts.map(t=>'<span class="tag-aus">'+t+'</span>').join('');
     h+='<div class="hbar"><div class="hbar-name" title="'+d+'">'+d+'</div>'+
        '<div class="hbar-track"><div class="hbar-fill" style="width:'+Math.min(pEfetivo/1.35,1)*100+'%;background:'+hColor(pEfetivo)+'"></div>'+
        '<div class="hbar-cap" style="left:'+(CP*100).toFixed(1)+'%"></div></div>'+
