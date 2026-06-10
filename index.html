@@ -231,7 +231,7 @@ tr.hr{display:none}
       <div class="legend-row">
         <span class="ll">Complexidade:</span>
         <span class="chip chip-P">P=1pt</span><span class="chip chip-M">M=2pts</span>
-        <span class="chip chip-G">G=3pts</span><span class="chip chip-GG">GG=4pts</span>
+        <span class="chip chip-G">G=3pts</span><span class="chip chip-GG">GG=8pts</span>
         <span class="ll">| teto: 8pts</span>
       </div>
       <div id="chart-inner"></div>
@@ -239,12 +239,12 @@ tr.hr{display:none}
     <div class="vp" id="dupla-detail">
       <div class="legend-row">
         <span class="chip chip-P">P=1pt</span><span class="chip chip-M">M=2pts</span>
-        <span class="chip chip-G">G=3pts</span><span class="chip chip-GG">GG=4pts</span>
+        <span class="chip chip-G">G=3pts</span><span class="chip chip-GG">GG=8pts</span>
       </div>
       <div id="detail-inner"></div>
     </div>
     <div id="tbd-block"></div>
-    <p class="cap-note">Capacidade: 8pts/semana por dupla. Linha = teto.</p>
+    <p class="cap-note"><strong>Teto: 8pts/semana por dupla.</strong> Pesos base: P=1pt · M=2pts · G=3pts · GG=8pts (ocupa a semana inteira). O peso de cada job aumenta automaticamente conforme o prazo: entrega em até 3 dias dobra o peso · entrega em 4–7 dias aumenta 50% · acima de 7 dias sem alteração. Um G tranquilo vale 3pts; o mesmo G com entrega amanhã vale 6pts. O semáforo vira vermelho por sobrecarga de pontos OU por urgência crítica (job G/GG com entrega em até 3 dias).</p>
   </div>
 
   <div class="card">
@@ -318,7 +318,7 @@ tr.hr{display:none}
 
 <script>
 /* ── Constantes ── */
-const CAPACITY=8, WEIGHTS={P:1,M:2,G:3,GG:4};
+const CAPACITY=8, WEIGHTS={P:1,M:2,G:3,GG:8};
 const OVERLAP_TAGS=["Marihá + Lui","Gustavo + Amanda Duca","Amanda Duca + Gustavo"];
 const STUDIO_TAGS=["Paula + Bruno","Ana Paula + Bruno"];
 const CONTA_COLORS=['#1a5fa8','#3a9e5f','#c47e12','#4a42b0','#c03b3b','#5a9e9a','#8b5e3c'];
@@ -331,6 +331,19 @@ let duplas=[], duplasSeen={}, allPersons=[], personsSeen={}, carga={}, tbdJobs=[
 /* ── Utilitários ── */
 function isTBD(s){return !s||!s.trim()||s.trim().toUpperCase()==='TBD'||s.trim()==='-';}
 function w(c){return WEIGHTS[c]||2;}
+
+/* Peso real = peso base × multiplicador de urgência */
+function wUrgency(comp, dataFinal){
+  const base = w(comp);
+  if(!dataFinal) return base;
+  const d = pDate(dataFinal);
+  if(!d) return base;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const diff = Math.ceil((d - today) / 864e5);
+  if(diff <= 3)  return base * 2;    /* urgente: dobra o peso */
+  if(diff <= 7)  return base * 1.5;  /* próximo: aumenta 50% */
+  return base;                        /* confortável: sem alteração */
+}
 function hColor(p){return p<=0.6?'#3a9e5f':p<=0.85?'#e9a93a':p<=1?'#e05252':'#a02020';}
 function bCls(p){return p<=0.6?'fill-ok':p<=0.85?'fill-warn':p<=1?'fill-crit':'fill-over';}
 const FILL_COLORS={'fill-ok':'#3a9e5f','fill-warn':'#e9a93a','fill-crit':'#e05252','fill-over':'#a02020'};
@@ -357,7 +370,7 @@ function recalc(){
     if(isTBD(r.dupla))return;
     pDuplas(r.dupla).forEach(d=>{
       if(!carga[d])carga[d]={pts:0,jobs:[]};
-      carga[d].pts+=w(r.comp); carga[d].jobs.push({label:r.job,comp:r.comp});
+      carga[d].pts+=wUrgency(r.comp,r.dataFinal); carga[d].jobs.push({label:r.job,comp:r.comp,dataFinal:r.dataFinal});
     });
   });
   tbdJobs=RAW.filter(r=>isTBD(r.dupla));
@@ -379,7 +392,22 @@ function kpi(l,v,s,danger){return '<div class="kpi"><div class="kpi-label">'+l+'
 /* ── Render Semáforo ── */
 function renderSemaforo(){
   const v=[],a=[],r=[];
-  duplas.forEach(d=>{const p=carga[d].pts/CAPACITY;if(p>0.85)r.push(d);else if(p>0.5)a.push(d);else v.push(d);});
+  const today=new Date();today.setHours(0,0,0,0);
+  duplas.forEach(d=>{
+    const pct=carga[d].pts/CAPACITY;
+    /* Verifica se há job urgente (entrega <= 3 dias) com peso G ou GG */
+    const temUrgente=RAW.some(row=>{
+      if(isTBD(row.dupla)) return false;
+      if(!pDuplas(row.dupla).includes(d)) return false;
+      const dd=pDate(row.dataFinal);
+      if(!dd) return false;
+      const diff=Math.ceil((dd-today)/864e5);
+      return diff>=0 && diff<=3 && ['G','GG'].includes(row.comp);
+    });
+    if(pct>0.85 || temUrgente) r.push(d);
+    else if(pct>0.5) a.push(d);
+    else v.push(d);
+  });
   document.getElementById('sema-bar').innerHTML=
     sema('dot-g','Operando',v)+sema('dot-a','Atenção',a)+sema('dot-r','No limite',r);
 }
@@ -492,7 +520,7 @@ function renderAlertas(){
   });
   const urg=RAW.filter(r=>{const d=pDate(r.dataFinal);if(!d)return false;const df=Math.ceil((d-today)/864e5);return df>=0&&df<=7;});
   if(urg.length) h+=alert_('d','⏰','<strong>'+urg.length+' job(s) com entrega nos próximos 7 dias</strong>'+urg.map(r=>r.job+' ('+r.dataFinal+')').join(' · '));
-  if(RAW.some(r=>(r.cliente||'').includes('Época'))) h+=alert_('w','!','<strong>Época Cosméticos ativo (fora do fee)</strong>Job GG convocando múltiplas duplas da pauta regular.');
+
   if(tbdJobs.length) h+=alert_('w','!','<strong>'+tbdJobs.length+' job(s) sem alocação definida</strong>'+tbdJobs.map(r=>r.job).join(', '));
   if(!h) h=alert_('i','✓','<strong>Time dentro da capacidade</strong>Nenhuma dupla acima do teto no momento.');
   document.getElementById('alertas').innerHTML=h;
