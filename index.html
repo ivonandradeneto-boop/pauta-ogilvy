@@ -620,13 +620,8 @@ function sv(panel,view,btn){
 /* ═════════════════════════════════════════════
    POLLING SILENCIOSO — a cada 60 segundos
    ═════════════════════════════════════════════ */
-/* ══ CONFIGURAÇÃO — substitua pelo ID da sua planilha ══
-   ID está na URL: docs.google.com/spreadsheets/d/SEU_ID/edit
-   A aba deve ser publicada: Arquivo > Compartilhar > Publicar na web > CSV
-*/
-const SHEET_ID  = 'SEU_SHEET_ID_AQUI';
-const SHEET_TAB = 'Pauta';
-const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQSr9aZJ0XwjegQmGRfaHo_S_6sapSAnbKmipGzt6Aw7tV8YPXzHbm97k-bKu6XjIS-XZn4soBIbf6G/pub?gid=0&single=true&output=csv';
+/* ══ FONTE DE DADOS — Apps Script (tempo real, sem cache) ══ */
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbzOWUOk07vKnn79chFaXGjrrcjoHIR6qdRD4p0O83-cV6ahvhGL867i79p8Mmr9cVBkDw/exec';
 
 const POLL_MS=60000;
 let lastHash=JSON.stringify(RAW);
@@ -646,45 +641,14 @@ function manualRefresh(){
   poll();
 }
 
-function parseCSV(text){
-  const lines = text.trim().split('\n').slice(1); // pula cabeçalho
-  return lines
-    .filter(l => l.trim())
-    .map(line => {
-      const cols = [];
-      let cur = '', inQ = false;
-      for(let i=0;i<line.length;i++){
-        const c=line[i];
-        if(c==='"'&&!inQ){inQ=true;}
-        else if(c==='"'&&inQ&&line[i+1]==='"'){cur+='"';i++;}
-        else if(c==='"'&&inQ){inQ=false;}
-        else if(c===','&&!inQ){cols.push(cur.trim());cur='';}
-        else{cur+=c;}
-      }
-      cols.push(cur.trim());
-      return {
-        cliente:  (cols[0]||'').trim(),
-        job:      (cols[1]||'').trim(),
-        descricao:(cols[2]||'').trim(),
-        comp:     (cols[3]||'').trim().toUpperCase(),
-        dupla:    (cols[4]||'').trim(),
-        status:   (cols[5]||'').trim(),
-        data1:    (cols[6]||'').trim(),
-        dataFinal:(cols[7]||'').trim(),
-      };
-    })
-    .filter(r => r.cliente && r.job);
-}
-
 async function poll(){
   if(!pollOn)return;
   setSyncStatus('syncing');
   try{
-    const url = SHEET_CSV_URL + '&_t=' + Date.now();
-    const res = await fetch(url);
+    const url = GAS_URL + '?action=dados&_t=' + Date.now();
+    const res = await fetch(url, {redirect: 'follow'});
     if(!res.ok) throw new Error('HTTP '+res.status);
-    const text = await res.text();
-    const newData = parseCSV(text);
+    const newData = await res.json();
     const newHash = JSON.stringify(newData);
     if(newHash!==lastHash){
       lastHash=newHash;
@@ -710,13 +674,13 @@ document.addEventListener('visibilitychange',()=>{
 /* mobile via @container — sem JS necessário */
 
 /* ── Init ── */
-/* Carrega dados iniciais da planilha */
+/* Carrega dados iniciais do Apps Script */
 (async function(){
   try{
-    const res = await fetch(SHEET_CSV_URL);
+    const url = GAS_URL + '?action=dados&_t=' + Date.now();
+    const res = await fetch(url, {redirect: 'follow'});
     if(res.ok){
-      const text = await res.text();
-      const data = parseCSV(text);
+      const data = await res.json();
       RAW.length=0; data.forEach(r=>RAW.push(r));
       lastHash=JSON.stringify(data);
     }
