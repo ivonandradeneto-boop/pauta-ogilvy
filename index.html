@@ -78,6 +78,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,san
 .chip-GG{background:var(--red-bg);color:var(--red);border-color:#f0a0a0}
 .tag-st{font-size:10px;padding:1px 6px;border-radius:9px;background:var(--purple-bg);color:var(--purple);border:.5px solid #c5c2f0}
 .tag-ep{font-size:10px;padding:1px 6px;border-radius:9px;background:var(--amber-bg);color:var(--amber);border:.5px solid #f5c97a}
+.tag-aus{font-size:10px;padding:1px 6px;border-radius:9px;background:var(--red-bg);color:var(--red);border:.5px solid #f0a0a0}
+.aus-block{background:var(--surface2);border-radius:var(--radius-sm);padding:.75rem .9rem;margin-bottom:1rem}
+.aus-title{font-size:11px;font-weight:500;color:var(--text3);margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em}
+.aus-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:.5px solid var(--border);font-size:12px}
+.aus-row:last-child{border-bottom:none}
+.aus-pessoa{font-weight:500;color:var(--text);flex:1}
+.aus-tipo{font-size:10px;padding:1px 8px;border-radius:9px;background:var(--red-bg);color:var(--red);border:.5px solid #f0a0a0}
+.aus-tipo.folga{background:var(--amber-bg);color:var(--amber);border-color:#f5c97a}
+.aus-datas{font-size:11px;color:var(--text3)}
 .tbd-block{background:var(--surface2);border-radius:var(--radius-sm);padding:.6rem .85rem;margin-top:.75rem}
 .tbd-t{font-size:11px;font-weight:500;color:var(--text3);margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em}
 .tbd-chip{font-size:11px;padding:2px 8px;border-radius:9px;background:var(--surface);border:.5px solid var(--border);color:var(--text2);display:inline-block;margin:2px 2px 2px 0}
@@ -217,6 +226,7 @@ tr.hr{display:none}
 
 <div class="sec section-anchor" id="sec-time">Semáforo geral do time</div>
 <div class="sema-bar" id="sema-bar"></div>
+<div id="aus-block"></div>
 
 <div class="grid2">
   <div class="card">
@@ -326,6 +336,7 @@ const CONTA_BG=['#e6f0fb','#e6f4ec','#fef3dc','#eeedfe','#fdeaea','#e0f4f3','#f5
 
 /* ── Estado global ── */
 let RAW=[];
+let AUSENCIAS=[];
 let duplas=[], duplasSeen={}, allPersons=[], personsSeen={}, carga={}, tbdJobs=[];
 
 /* ── Utilitários ── */
@@ -350,6 +361,45 @@ const FILL_COLORS={'fill-ok':'#3a9e5f','fill-warn':'#e9a93a','fill-crit':'#e0525
 function compChip(c,j){const cl=['P','M','G','GG'].includes(c)?'chip-'+c:'';return '<span class="chip '+cl+'">'+j+' · '+(c||'?')+'</span>';}
 function sBadge(s){const v=(s||'').toLowerCase();if(v.includes('cria'))return'<span class="bem">'+s+'</span>';if(v.includes('backlog'))return'<span class="bbl">'+s+'</span>';if(v.includes('ok')||v.includes('entregue'))return'<span class="bok">'+s+'</span>';return'<span class="bva">'+s+'</span>';}
 function pDate(s){if(!s)return null;const p=s.split('/');if(p.length!==3)return null;const d=new Date(+p[2],+p[1]-1,+p[0]);return isNaN(d)?null:d;}
+
+/* ── Ausências ── */
+/* Retorna fator de capacidade da dupla para a semana atual (0.5 se alguém ausente, 1 se todos presentes) */
+function capacidadeDupla(dupla){
+  if(!AUSENCIAS.length) return 1;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const fimSemana = new Date(today); fimSemana.setDate(today.getDate()+7);
+  const pessoas = pPersons(dupla);
+  let ausentes = 0;
+  pessoas.forEach(p=>{
+    const ausente = AUSENCIAS.some(a=>{
+      if(!a.pessoa || !a.dataInicio || !a.dataFim) return false;
+      /* match parcial do nome — "Lucas" bate em "Lucas + Wil" */
+      if(!a.pessoa.toLowerCase().includes(p.toLowerCase()) &&
+         !p.toLowerCase().includes(a.pessoa.toLowerCase())) return false;
+      const ini = pDate(a.dataInicio);
+      const fim = pDate(a.dataFim);
+      if(!ini || !fim) return false;
+      /* ausente se o período sobrepõe a semana atual */
+      return ini <= fimSemana && fim >= today;
+    });
+    if(ausente) ausentes++;
+  });
+  if(ausentes === 0) return 1;
+  if(ausentes >= pessoas.length) return 0; /* dupla inteira fora */
+  return 1 - (ausentes / pessoas.length);  /* proporção disponível */
+}
+
+/* Ausências relevantes: ativas agora ou nos próximos 14 dias */
+function ausenciasProximas(){
+  const today = new Date(); today.setHours(0,0,0,0);
+  const horizonte = new Date(today); horizonte.setDate(today.getDate()+14);
+  return AUSENCIAS.filter(a=>{
+    const ini = pDate(a.dataInicio);
+    const fim = pDate(a.dataFim);
+    if(!ini || !fim) return false;
+    return ini <= horizonte && fim >= today;
+  });
+}
 function dCell(s){if(!s)return'<span class="dc">—</span>';const d=pDate(s);if(!d)return'<span class="dc">'+s+'</span>';const t=new Date();t.setHours(0,0,0,0);const df=Math.ceil((d-t)/864e5);const cl=df<=3?'urg':df<=7?'soo':'';return'<span class="dc '+cl+'">'+s+(df>=0&&df<=7?' ('+df+'d)':'')+'</span>';}
 
 /* ── Parsing de duplas ── */
@@ -394,7 +444,10 @@ function renderSemaforo(){
   const v=[],a=[],r=[];
   const today=new Date();today.setHours(0,0,0,0);
   duplas.forEach(d=>{
-    const pct=carga[d].pts/CAPACITY;
+    const capFatorSema=capacidadeDupla(d);
+    const capEfetivaSema=Math.max(1,Math.round(CAPACITY*capFatorSema));
+    const pct=carga[d].pts/capEfetivaSema;
+    const ausente=capFatorSema<1;
     /* Verifica se há job urgente (entrega <= 3 dias) com peso G ou GG */
     const temUrgente=RAW.some(row=>{
       if(isTBD(row.dupla)) return false;
@@ -404,7 +457,7 @@ function renderSemaforo(){
       const diff=Math.ceil((dd-today)/864e5);
       return diff>=0 && diff<=3 && ['G','GG'].includes(row.comp);
     });
-    if(pct>0.85 || temUrgente) r.push(d);
+    if(pct>0.85 || temUrgente || ausente) r.push(d);
     else if(pct>0.5) a.push(d);
     else v.push(d);
   });
@@ -422,11 +475,16 @@ function renderChart(){
     const bw=Math.min(p/1.35,1)*100, over=c.pts>CAPACITY;
     const tags=(STUDIO_TAGS.includes(d)?'<span class="tag-st">Studio</span>':'')+
                (OVERLAP_TAGS.includes(d)?'<span class="tag-ep">⚠Época</span>':'');
+    const capFator=capacidadeDupla(d);
+    const capEfetiva=Math.round(CAPACITY*capFator);
+    const pEfetivo=capEfetiva>0?c.pts/capEfetiva:1;
+    const overEf=c.pts>capEfetiva;
+    const ausTag=capFator<1?'<span class="tag-aus">⛔'+(capFator===0?'fora':'parcial')+'</span>':'';
     h+='<div class="hbar"><div class="hbar-name" title="'+d+'">'+d+'</div>'+
-       '<div class="hbar-track"><div class="hbar-fill" style="width:'+bw.toFixed(1)+'%;background:'+hColor(p)+'"></div>'+
+       '<div class="hbar-track"><div class="hbar-fill" style="width:'+Math.min(pEfetivo/1.35,1)*100+'%;background:'+hColor(pEfetivo)+'"></div>'+
        '<div class="hbar-cap" style="left:'+(CP*100).toFixed(1)+'%"></div></div>'+
-       '<div class="hbar-pts'+(over?' over':'')+'">'+c.pts+'/'+CAPACITY+(over?' ↑':'')+'</div>'+
-       '<div class="hbar-tags">'+tags+'</div></div>';
+       '<div class="hbar-pts'+(overEf?' over':'')+'">'+c.pts+'/'+(capEfetiva===CAPACITY?CAPACITY:capEfetiva+'⬇')+(overEf?' ↑':'')+'</div>'+
+       '<div class="hbar-tags">'+ausTag+tags+'</div></div>';
   });
   document.getElementById('chart-inner').innerHTML=h;
 }
@@ -522,6 +580,20 @@ function renderAlertas(){
   if(urg.length) h+=alert_('d','⏰','<strong>'+urg.length+' job(s) com entrega nos próximos 7 dias</strong>'+urg.map(r=>r.job+' ('+r.dataFinal+')').join(' · '));
 
   if(tbdJobs.length) h+=alert_('w','!','<strong>'+tbdJobs.length+' job(s) sem alocação definida</strong>'+tbdJobs.map(r=>r.job).join(', '));
+  /* Alerta de ausências com jobs alocados no período */
+  ausenciasProximas().forEach(a=>{
+    const ini=pDate(a.dataInicio); const fim=pDate(a.dataFim);
+    if(!ini||!fim) return;
+    const jobsConflito=RAW.filter(r=>{
+      if(isTBD(r.dupla)) return false;
+      if(!pPersons(r.dupla).some(p=>p.toLowerCase().includes(a.pessoa.toLowerCase())||a.pessoa.toLowerCase().includes(p.toLowerCase()))) return false;
+      const df=pDate(r.dataFinal);
+      return df && df>=ini && df<=fim;
+    });
+    if(jobsConflito.length){
+      h+=alert_('w','⛔','<strong>'+a.pessoa+' — '+a.tipo+' ('+a.dataInicio+(a.dataInicio!==a.dataFim?' a '+a.dataFim:'')+') com '+jobsConflito.length+' job(s) no período</strong>'+jobsConflito.map(r=>r.job).join(', ')+'. Verificar realocação ou freela.');
+    }
+  });
   if(!h) h=alert_('i','✓','<strong>Time dentro da capacidade</strong>Nenhuma dupla acima do teto no momento.');
   document.getElementById('alertas').innerHTML=h;
 }
@@ -544,8 +616,26 @@ function renderTabela(){
 }
 
 /* ── Render tudo ── */
+function renderAusencias(){
+  const el=document.getElementById('aus-block');
+  if(!el) return;
+  const proximas=ausenciasProximas();
+  if(!proximas.length){el.innerHTML='';return;}
+  let h='<div class="aus-block"><div class="aus-title">Ausências — próximos 14 dias ('+proximas.length+')</div>';
+  proximas.forEach(a=>{
+    const tipo=(a.tipo||'Ausência').toLowerCase();
+    const isFolga=tipo.includes('folga')||tipo.includes('banco');
+    const mesmodia=a.dataInicio===a.dataFim;
+    const periodo=mesmodia?a.dataInicio:a.dataInicio+' até '+a.dataFim;
+    h+='<div class="aus-row"><div class="aus-pessoa">'+a.pessoa+'</div>'+
+       '<span class="aus-tipo'+(isFolga?' folga':'')+'">'+a.tipo+'</span>'+
+       '<span class="aus-datas">'+periodo+'</span></div>';
+  });
+  el.innerHTML=h+'</div>';
+}
+
 function renderAll(){
-  renderKPIs(); renderSemaforo();
+  renderKPIs(); renderSemaforo(); renderAusencias();
   renderChart(); renderDetail(); renderTBD();
   renderContas(); renderAlertas(); renderTabela();
 }
@@ -648,11 +738,14 @@ async function poll(){
     const url = GAS_URL + '?action=dados&_t=' + Date.now();
     const res = await fetch(url, {redirect: 'follow'});
     if(!res.ok) throw new Error('HTTP '+res.status);
-    const newData = await res.json();
-    const newHash = JSON.stringify(newData);
+    const payload = await res.json();
+    const newData = payload.jobs || payload; /* compatibilidade */
+    const newAus  = payload.ausencias || [];
+    const newHash = JSON.stringify(newData) + JSON.stringify(newAus);
     if(newHash!==lastHash){
       lastHash=newHash;
       RAW.length=0; newData.forEach(r=>RAW.push(r));
+      AUSENCIAS.length=0; newAus.forEach(a=>AUSENCIAS.push(a));
       recalc(); renderAll();
       setSyncStatus('updated');
     } else {
@@ -680,9 +773,12 @@ document.addEventListener('visibilitychange',()=>{
     const url = GAS_URL + '?action=dados&_t=' + Date.now();
     const res = await fetch(url, {redirect: 'follow'});
     if(res.ok){
-      const data = await res.json();
+      const payload = await res.json();
+      const data = payload.jobs || payload;
+      const aus  = payload.ausencias || [];
       RAW.length=0; data.forEach(r=>RAW.push(r));
-      lastHash=JSON.stringify(data);
+      AUSENCIAS.length=0; aus.forEach(a=>AUSENCIAS.push(a));
+      lastHash=JSON.stringify(data)+JSON.stringify(aus);
     }
   }catch(e){ console.warn('Init fetch error:',e); }
   recalc();
