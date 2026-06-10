@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#f5f4f0">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Pauta Ogilvy">
+<link rel="manifest" id="pwa-manifest">
+<title>Pauta de Criação — Ogilvy Brasil / Núcleo Magalu</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f5f4f0;--surface:#fff;--surface2:#f0ede8;
+  --border:rgba(0,0,0,.10);--border2:rgba(0,0,0,.18);
+  --text:#1a1a18;--text2:#5a5955;--text3:#9a9893;
+  --green:#3a9e5f;--amber:#c47e12;--amber-bg:#fef3dc;
+  --red:#c03b3b;--red-bg:#fdeaea;
+  --blue:#1a5fa8;--blue-bg:#e6f0fb;
+  --purple-bg:#eeedfe;--purple:#4a42b0;
+  --radius:10px;--radius-sm:6px;
+}
+html,body{width:100%;overflow-x:hidden}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;min-height:100vh}
+.wrap{max-width:1200px;margin:0 auto;padding:2rem 1.5rem 4rem;container-type:inline-size;container-name:dashboard}
+.top-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.75rem;flex-wrap:wrap;gap:8px}
+.top-title{font-size:12px;font-weight:500;color:var(--text2);letter-spacing:.06em;text-transform:uppercase}
+.sync-status{font-size:12px;color:var(--text3)}
+.btn-reload{font-size:12px;padding:4px 12px;border-radius:20px;border:.5px solid var(--border2);background:var(--surface);color:var(--text2);cursor:pointer}
+.btn-reload:hover{background:var(--surface2)}
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1.5rem}
+.kpi{background:var(--surface);border:.5px solid var(--border);border-radius:var(--radius);padding:.9rem 1rem}
+.kpi-label{font-size:11px;color:var(--text2);margin-bottom:4px;font-weight:500;text-transform:uppercase;letter-spacing:.04em}
+.kpi-val{font-size:28px;font-weight:600;line-height:1}
+.kpi-val.danger{color:var(--red)}
+.kpi-sub{font-size:11px;color:var(--text3);margin-top:4px}
+.sec{font-size:11px;font-weight:500;color:var(--text2);letter-spacing:.06em;text-transform:uppercase;margin-bottom:.65rem;margin-top:1.5rem}
+.sema-bar{display:flex;gap:10px;margin-bottom:1.5rem;flex-wrap:wrap}
+.sema{display:flex;align-items:center;gap:8px;flex:1;min-width:150px;background:var(--surface);border:.5px solid var(--border);border-radius:var(--radius-sm);padding:.55rem .85rem}
+.sema-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.dot-g{background:#3a9e5f}.dot-a{background:#e9a93a}.dot-r{background:#e05252}
+.sema-label{font-size:13px;font-weight:500}
+.sema-names{margin-left:auto;font-size:11px;color:var(--text2);text-align:right;max-width:220px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:1.5rem}
+.card{background:var(--surface);border:.5px solid var(--border);border-radius:var(--radius);padding:1rem 1.1rem}
+.card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem}
+.view-toggle{display:flex;gap:4px}
+.vt{font-size:11px;padding:3px 10px;border-radius:20px;border:.5px solid var(--border2);background:var(--surface2);color:var(--text2);cursor:pointer}
+.vt.on{background:var(--text);color:#fff;border-color:var(--text)}
+.vp{display:none}.vp.on{display:block}
+/* barras horizontais */
+.hbar{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:.5px solid var(--border)}
+.hbar:last-child{border-bottom:none}
+.hbar-name{font-size:12px;font-weight:500;width:155px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hbar-track{flex:1;height:10px;background:var(--surface2);border-radius:5px;position:relative}
+.hbar-fill{height:100%;border-radius:5px;position:absolute;top:0;left:0;transition:width .5s}
+.hbar-cap{position:absolute;top:-4px;height:18px;width:2px;background:var(--border2);border-radius:1px}
+.hbar-pts{font-size:11px;font-weight:500;color:var(--text2);min-width:42px;text-align:right}
+.hbar-pts.over{color:var(--red)}
+.hbar-tags{display:flex;gap:3px;min-width:56px;justify-content:flex-end}
+/* detalhe duplas */
+.drow{padding:8px 0;border-bottom:.5px solid var(--border)}
+.drow:last-child{border-bottom:none}
+.dtop{display:flex;align-items:center;gap:6px;margin-bottom:5px}
+.dname{font-size:13px;font-weight:500;flex:1}
+.dpts{font-size:12px;font-weight:500;color:var(--text2);min-width:48px;text-align:right}
+.dpts.over{color:var(--red)}
+.btrack{height:6px;background:var(--surface2);border-radius:3px;position:relative;margin-bottom:5px}
+.bfill{height:100%;border-radius:3px;position:absolute;top:0;left:0}
+.bcap{position:absolute;top:-3px;height:12px;width:1.5px;background:var(--border2);border-radius:1px}
+.chips{display:flex;flex-wrap:wrap;gap:3px}
+.chip{font-size:10px;padding:1px 7px;border-radius:9px;border:.5px solid var(--border);color:var(--text2);background:var(--surface2)}
+.chip-P{background:#e6f4ec;color:#1a6635;border-color:#9fd4b3}
+.chip-M{background:var(--blue-bg);color:var(--blue);border-color:#9fc5f0}
+.chip-G{background:var(--amber-bg);color:var(--amber);border-color:#f5c97a}
+.chip-GG{background:var(--red-bg);color:var(--red);border-color:#f0a0a0}
+.tag-st{font-size:10px;padding:1px 6px;border-radius:9px;background:var(--purple-bg);color:var(--purple);border:.5px solid #c5c2f0}
+.tag-ep{font-size:10px;padding:1px 6px;border-radius:9px;background:var(--amber-bg);color:var(--amber);border:.5px solid #f5c97a}
+.tbd-block{background:var(--surface2);border-radius:var(--radius-sm);padding:.6rem .85rem;margin-top:.75rem}
+.tbd-t{font-size:11px;font-weight:500;color:var(--text3);margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em}
+.tbd-chip{font-size:11px;padding:2px 8px;border-radius:9px;background:var(--surface);border:.5px solid var(--border);color:var(--text2);display:inline-block;margin:2px 2px 2px 0}
+/* barras verticais */
+.vbar-wrap{display:flex;align-items:flex-end;gap:8px;height:140px;margin-bottom:.5rem}
+.vbar-col{display:flex;flex-direction:column;align-items:center;flex:1;gap:4px}
+.vbar-val{font-size:11px;font-weight:600;color:var(--text2)}
+.vbar-bar{width:100%;border-radius:4px 4px 0 0;min-height:4px}
+.vbar-label{font-size:10px;color:var(--text3);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.vbar-axis{border-top:.5px solid var(--border2);margin-bottom:.5rem}
+/* donut */
+.donut-wrap{display:flex;align-items:center;gap:1.5rem;padding:.25rem 0}
+.donut-legend{display:flex;flex-direction:column;gap:6px;flex:1}
+.donut-item{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text2)}
+.donut-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+/* lista contas */
+.crow{display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:.5px solid var(--border)}
+.crow:last-child{border-bottom:none}
+.crow-name{font-size:13px;font-weight:500;width:130px;flex-shrink:0}
+.crow-jobs{font-size:12px;color:var(--text2);flex:1;line-height:1.6}
+.crow-n{font-size:12px;font-weight:600;padding:2px 10px;border-radius:10px;flex-shrink:0}
+/* alertas */
+.alert{border-radius:var(--radius-sm);padding:.75rem 1rem;font-size:13px;display:flex;gap:10px;margin-bottom:.75rem;border:.5px solid}
+.al-d{background:var(--red-bg);border-color:#f0a0a0;color:#7a1f1f}
+.al-w{background:var(--amber-bg);border-color:#f5c97a;color:#7a4e0a}
+.al-i{background:var(--blue-bg);border-color:#9fc5f0;color:#103d70}
+.al-icon{font-size:15px;flex-shrink:0;margin-top:1px}
+.alert strong{font-weight:600;display:block;margin-bottom:2px}
+/* filtros */
+.filters{background:var(--surface);border:.5px solid var(--border);border-radius:var(--radius);padding:.85rem 1rem;margin-bottom:1rem;display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
+.fg{display:flex;flex-direction:column;gap:4px;min-width:120px;flex:1}
+.fl{font-size:10px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.05em}
+.fs{font-size:12px;padding:5px 8px;border-radius:var(--radius-sm);border:.5px solid var(--border2);background:var(--bg);color:var(--text);appearance:none;cursor:pointer;width:100%}
+.btn-cl{font-size:12px;padding:5px 14px;border-radius:var(--radius-sm);border:.5px solid var(--border2);background:var(--surface2);color:var(--text2);cursor:pointer}
+.fc{font-size:11px;color:var(--text3);align-self:flex-end;padding-bottom:5px}
+/* tabela */
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;font-size:10px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;padding:6px 10px;border-bottom:.5px solid var(--border2);white-space:nowrap;cursor:pointer;user-select:none}
+th:hover{color:var(--text)}
+th.sorted .sa{opacity:1}
+.sa{margin-left:3px;opacity:.4;font-size:9px}
+td{padding:7px 10px;border-bottom:.5px solid var(--border);color:var(--text);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--surface2)}
+tr.hr{display:none}
+.bem{display:inline-block;font-size:10px;padding:2px 8px;border-radius:9px;background:var(--blue-bg);color:var(--blue);border:.5px solid #9fc5f0}
+.bbl{display:inline-block;font-size:10px;padding:2px 8px;border-radius:9px;background:var(--purple-bg);color:var(--purple);border:.5px solid #c5c2f0}
+.bok{display:inline-block;font-size:10px;padding:2px 8px;border-radius:9px;background:#e6f4ec;color:#1a6635;border:.5px solid #9fd4b3}
+.bva{display:inline-block;font-size:10px;padding:2px 8px;border-radius:9px;background:var(--surface2);color:var(--text3);border:.5px solid var(--border)}
+.dc{white-space:nowrap;color:var(--text2);font-size:11px}
+.dc.urg{color:var(--red);font-weight:500}
+.dc.soo{color:var(--amber);font-weight:500}
+.no-r{padding:2rem;text-align:center;color:var(--text3);font-size:13px;display:none}
+.cap-note{font-size:11px;color:var(--text3);margin-top:6px}
+.legend-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:.75rem}
+.ll{font-size:11px;color:var(--text3)}
+/* ══ RESPONSIVO MOBILE ══ */
+/* ══ CONTAINER QUERY MOBILE — funciona dentro de iframe ══ */
+@container dashboard (max-width: 700px) {
+  body{font-size:15px}
+  .wrap{padding:1rem 1rem 6rem}
+  .top-bar{flex-direction:column;align-items:flex-start;gap:6px;margin-bottom:1.25rem}
+  .top-title{font-size:11px}
+  .sync-status{font-size:11px}
+  .btn-reload{font-size:12px;padding:6px 16px;min-height:36px}
+  .kpi-grid{grid-template-columns:1fr 1fr;gap:8px;margin-bottom:1.25rem}
+  .kpi{padding:.75rem .85rem}
+  .kpi-val{font-size:32px}
+  .kpi-label{font-size:10px}
+  .sema-bar{flex-direction:column;gap:8px}
+  .sema{min-width:unset;padding:.65rem 1rem}
+  .sema-names{max-width:100%;text-align:left;font-size:12px}
+  .sema-label{font-size:14px}
+  .grid2{grid-template-columns:1fr;gap:10px}
+  .hbar-name{width:110px;font-size:11px}
+  .hbar-pts{font-size:11px;min-width:36px}
+  .hbar-tags{min-width:40px}
+  .view-toggle{gap:6px}
+  .vt{font-size:12px;padding:6px 14px;min-height:34px}
+  .card-head{flex-wrap:wrap;gap:8px}
+  .filters{flex-direction:column;gap:8px}
+  .fg{min-width:100%}
+  .fs{min-height:38px;font-size:14px}
+  .btn-cl{min-height:38px;font-size:13px}
+  .tw{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  table{min-width:600px}
+  td,th{padding:8px 10px;font-size:11px}
+  .alert{font-size:13px;padding:.65rem .85rem}
+  .donut-wrap{flex-direction:column;align-items:center;gap:1rem}
+  .donut-legend{width:100%}
+  .chip{font-size:10px;padding:2px 7px}
+  .mobile-nav{display:flex}
+}
+/* Bottom nav — só aparece em mobile */
+.mobile-nav{
+  display:none;
+  position:fixed;bottom:0;left:0;right:0;
+  background:var(--surface);
+  border-top:.5px solid var(--border2);
+  padding:.5rem 0;
+  padding-bottom:env(safe-area-inset-bottom,.5rem);
+  z-index:100;
+  justify-content:space-around;
+  box-shadow:0 -4px 20px rgba(0,0,0,.08);
+}
+.mnav-btn{
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+  background:none;border:none;cursor:pointer;
+  font-size:10px;color:var(--text3);padding:.25rem .75rem;
+  min-width:56px;
+}
+.mnav-btn.active{color:var(--text)}
+.mnav-btn svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+/* Seções para o scroll da nav mobile */
+.section-anchor{scroll-margin-top:16px}
+
+/* Safe area para iPhone */
+@supports(padding-bottom:env(safe-area-inset-bottom)){
+  .wrap{padding-bottom:calc(5rem + env(safe-area-inset-bottom))}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="top-bar">
+  <span class="top-title">Ogilvy Brasil — Pauta de Criação / Núcleo Magalu</span>
+  <div style="display:flex;align-items:center;gap:10px">
+    <span class="sync-status" id="sync-status"></span>
+    <button class="btn-reload" onclick="manualRefresh()">↺ Atualizar</button>
+  </div>
+</div>
+
+<div class="kpi-grid section-anchor" id="kpi-grid"></div>
+
+<div class="sec section-anchor" id="sec-time">Semáforo geral do time</div>
+<div class="sema-bar" id="sema-bar"></div>
+
+<div class="grid2">
+  <div class="card">
+    <div class="card-head">
+      <div class="sec" style="margin:0">Carga por dupla</div>
+      <div class="view-toggle">
+        <button class="vt on" onclick="sv('dupla','chart',this)">Gráfico</button>
+        <button class="vt" onclick="sv('dupla','detail',this)">Detalhe</button>
+      </div>
+    </div>
+    <div class="vp on" id="dupla-chart">
+      <div class="legend-row">
+        <span class="ll">Complexidade:</span>
+        <span class="chip chip-P">P=1pt</span><span class="chip chip-M">M=2pts</span>
+        <span class="chip chip-G">G=3pts</span><span class="chip chip-GG">GG=4pts</span>
+        <span class="ll">| teto: 8pts</span>
+      </div>
+      <div id="chart-inner"></div>
+    </div>
+    <div class="vp" id="dupla-detail">
+      <div class="legend-row">
+        <span class="chip chip-P">P=1pt</span><span class="chip chip-M">M=2pts</span>
+        <span class="chip chip-G">G=3pts</span><span class="chip chip-GG">GG=4pts</span>
+      </div>
+      <div id="detail-inner"></div>
+    </div>
+    <div id="tbd-block"></div>
+    <p class="cap-note">Capacidade: 8pts/semana por dupla. Linha = teto.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div class="sec" style="margin:0">Jobs por conta</div>
+      <div class="view-toggle">
+        <button class="vt on" onclick="sv('conta','bars',this)">Barras</button>
+        <button class="vt" onclick="sv('conta','donut',this)">Donut</button>
+        <button class="vt" onclick="sv('conta','list',this)">Lista</button>
+      </div>
+    </div>
+    <div class="vp on" id="conta-bars"><div id="bars-inner"></div></div>
+    <div class="vp" id="conta-donut"><div id="donut-inner"></div></div>
+    <div class="vp" id="conta-list"><div id="list-inner"></div></div>
+  </div>
+</div>
+
+<div class="sec section-anchor" id="sec-alertas">Alertas</div>
+<div id="alertas"></div>
+
+<div class="sec section-anchor" id="sec-pauta" style="margin-top:2rem">Pauta completa</div>
+<div class="card" style="padding:1rem 1.1rem .5rem">
+  <div class="filters">
+    <div class="fg"><span class="fl">Cliente</span><select class="fs" id="f-cli" onchange="filt()"><option value="">Todos</option></select></div>
+    <div class="fg"><span class="fl">Dupla / Pessoa</span><select class="fs" id="f-dup" onchange="filt()"><option value="">Todas</option></select></div>
+    <div class="fg"><span class="fl">Complexidade</span><select class="fs" id="f-cmp" onchange="filt()"><option value="">Todas</option><option>P</option><option>M</option><option>G</option><option>GG</option></select></div>
+    <div class="fg"><span class="fl">Status</span><select class="fs" id="f-sts" onchange="filt()"><option value="">Todos</option></select></div>
+    <div class="fg"><span class="fl">Entrega final até</span><select class="fs" id="f-dat" onchange="filt()"><option value="">Qualquer data</option><option value="7">7 dias</option><option value="14">14 dias</option><option value="30">30 dias</option></select></div>
+    <button class="btn-cl" onclick="clearF()">✕ Limpar</button>
+    <span class="fc" id="fc"></span>
+  </div>
+  <div class="tw">
+    <table>
+      <thead><tr>
+        <th onclick="srt(0)">Cliente <span class="sa">↕</span></th>
+        <th onclick="srt(1)">Job <span class="sa">↕</span></th>
+        <th>O que precisa ser feito</th>
+        <th onclick="srt(3)">Complexidade <span class="sa">↕</span></th>
+        <th onclick="srt(4)">Dupla <span class="sa">↕</span></th>
+        <th onclick="srt(5)">Status <span class="sa">↕</span></th>
+        <th onclick="srt(6)">1ª Entrega <span class="sa">↕</span></th>
+        <th onclick="srt(7)">Entrega Final <span class="sa">↕</span></th>
+      </tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <div class="no-r" id="no-r">Nenhum job encontrado.</div>
+  </div>
+</div>
+
+</div><!-- /wrap -->
+
+<!-- Bottom nav mobile -->
+<nav class="mobile-nav" id="mobile-nav">
+  <button class="mnav-btn active" onclick="mnavGo('kpi-grid',this)">
+    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+    Visão geral
+  </button>
+  <button class="mnav-btn" onclick="mnavGo('sec-time',this)">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+    Time
+  </button>
+  <button class="mnav-btn" onclick="mnavGo('sec-alertas',this)">
+    <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    Alertas
+  </button>
+  <button class="mnav-btn" onclick="mnavGo('sec-pauta',this)">
+    <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+    Pauta
+  </button>
+</nav>
+
+<script>
+/* ── Constantes ── */
+const CAPACITY=8, WEIGHTS={P:1,M:2,G:3,GG:4};
+const OVERLAP_TAGS=["Marihá + Lui","Gustavo + Amanda Duca","Amanda Duca + Gustavo"];
+const STUDIO_TAGS=["Paula + Bruno","Ana Paula + Bruno"];
+const CONTA_COLORS=['#1a5fa8','#3a9e5f','#c47e12','#4a42b0','#c03b3b','#5a9e9a','#8b5e3c'];
+const CONTA_BG=['#e6f0fb','#e6f4ec','#fef3dc','#eeedfe','#fdeaea','#e0f4f3','#f5eee8'];
+
+/* ── Estado global ── */
+let RAW=[];
+let duplas=[], duplasSeen={}, allPersons=[], personsSeen={}, carga={}, tbdJobs=[];
+
+/* ── Utilitários ── */
+function isTBD(s){return !s||!s.trim()||s.trim().toUpperCase()==='TBD'||s.trim()==='-';}
+function w(c){return WEIGHTS[c]||2;}
+function hColor(p){return p<=0.6?'#3a9e5f':p<=0.85?'#e9a93a':p<=1?'#e05252':'#a02020';}
+function bCls(p){return p<=0.6?'fill-ok':p<=0.85?'fill-warn':p<=1?'fill-crit':'fill-over';}
+const FILL_COLORS={'fill-ok':'#3a9e5f','fill-warn':'#e9a93a','fill-crit':'#e05252','fill-over':'#a02020'};
+function compChip(c,j){const cl=['P','M','G','GG'].includes(c)?'chip-'+c:'';return '<span class="chip '+cl+'">'+j+' · '+(c||'?')+'</span>';}
+function sBadge(s){const v=(s||'').toLowerCase();if(v.includes('cria'))return'<span class="bem">'+s+'</span>';if(v.includes('backlog'))return'<span class="bbl">'+s+'</span>';if(v.includes('ok')||v.includes('entregue'))return'<span class="bok">'+s+'</span>';return'<span class="bva">'+s+'</span>';}
+function pDate(s){if(!s)return null;const p=s.split('/');if(p.length!==3)return null;const d=new Date(+p[2],+p[1]-1,+p[0]);return isNaN(d)?null:d;}
+function dCell(s){if(!s)return'<span class="dc">—</span>';const d=pDate(s);if(!d)return'<span class="dc">'+s+'</span>';const t=new Date();t.setHours(0,0,0,0);const df=Math.ceil((d-t)/864e5);const cl=df<=3?'urg':df<=7?'soo':'';return'<span class="dc '+cl+'">'+s+(df>=0&&df<=7?' ('+df+'d)':'')+'</span>';}
+
+/* ── Parsing de duplas ── */
+function pDuplas(r){if(isTBD(r))return[];const p=r.split(' + ').map(x=>x.trim()).filter(x=>x);const out=[];for(let i=0;i<p.length;i+=2)out.push(p[i+1]?p[i]+' + '+p[i+1]:p[i]);return out;}
+function pPersons(r){if(isTBD(r))return[];return r.split(' + ').map(x=>x.trim()).filter(x=>x);}
+
+/* ── Recalcula estado derivado ── */
+function recalc(){
+  duplas=[]; Object.keys(duplasSeen).forEach(k=>delete duplasSeen[k]);
+  allPersons=[]; Object.keys(personsSeen).forEach(k=>delete personsSeen[k]);
+  Object.keys(carga).forEach(k=>delete carga[k]);
+  RAW.forEach(r=>{
+    pDuplas(r.dupla).forEach(p=>{if(!duplasSeen[p]){duplasSeen[p]=true;duplas.push(p);}});
+    pPersons(r.dupla).forEach(p=>{if(!personsSeen[p]){personsSeen[p]=true;allPersons.push(p);}});
+  });
+  duplas.forEach(d=>{carga[d]={pts:0,jobs:[]};});
+  RAW.forEach(r=>{
+    if(isTBD(r.dupla))return;
+    pDuplas(r.dupla).forEach(d=>{
+      if(!carga[d])carga[d]={pts:0,jobs:[]};
+      carga[d].pts+=w(r.comp); carga[d].jobs.push({label:r.job,comp:r.comp});
+    });
+  });
+  tbdJobs=RAW.filter(r=>isTBD(r.dupla));
+}
+
+/* ── Render KPIs ── */
+function renderKPIs(){
+  const emC=RAW.filter(r=>(r.status||'').toLowerCase().includes('cria')).length;
+  const bl=RAW.filter(r=>(r.status||'').toLowerCase().includes('backlog')).length;
+  const ov=duplas.filter(d=>carga[d].pts>CAPACITY).length;
+  document.getElementById('kpi-grid').innerHTML=
+    kpi('Jobs ativos',RAW.length,'em pauta agora')+
+    kpi('Em criação',emC,'andamento imediato')+
+    kpi('Backlog',bl,'aguardando início')+
+    kpi('Duplas no limite',ov,'acima de 8pts/semana',ov>0);
+}
+function kpi(l,v,s,danger){return '<div class="kpi"><div class="kpi-label">'+l+'</div><div class="kpi-val'+(danger?' danger':'')+'">'+v+'</div><div class="kpi-sub">'+s+'</div></div>';}
+
+/* ── Render Semáforo ── */
+function renderSemaforo(){
+  const v=[],a=[],r=[];
+  duplas.forEach(d=>{const p=carga[d].pts/CAPACITY;if(p>0.85)r.push(d);else if(p>0.5)a.push(d);else v.push(d);});
+  document.getElementById('sema-bar').innerHTML=
+    sema('dot-g','Operando',v)+sema('dot-a','Atenção',a)+sema('dot-r','No limite',r);
+}
+function sema(dot,label,names){return '<div class="sema"><div class="sema-dot '+dot+'"></div><div class="sema-label">'+label+'</div><div class="sema-names">'+(names.join(' · ')||'—')+'</div></div>';}
+
+/* ── Render Carga por dupla: Gráfico ── */
+function renderChart(){
+  const CP=1/1.35;
+  let h='';
+  duplas.forEach(d=>{
+    const c=carga[d], p=c.pts/CAPACITY;
+    const bw=Math.min(p/1.35,1)*100, over=c.pts>CAPACITY;
+    const tags=(STUDIO_TAGS.includes(d)?'<span class="tag-st">Studio</span>':'')+
+               (OVERLAP_TAGS.includes(d)?'<span class="tag-ep">⚠Época</span>':'');
+    h+='<div class="hbar"><div class="hbar-name" title="'+d+'">'+d+'</div>'+
+       '<div class="hbar-track"><div class="hbar-fill" style="width:'+bw.toFixed(1)+'%;background:'+hColor(p)+'"></div>'+
+       '<div class="hbar-cap" style="left:'+(CP*100).toFixed(1)+'%"></div></div>'+
+       '<div class="hbar-pts'+(over?' over':'')+'">'+c.pts+'/'+CAPACITY+(over?' ↑':'')+'</div>'+
+       '<div class="hbar-tags">'+tags+'</div></div>';
+  });
+  document.getElementById('chart-inner').innerHTML=h;
+}
+
+/* ── Render Carga por dupla: Detalhe ── */
+function renderDetail(){
+  const CP=1/1.35;
+  let h='';
+  duplas.forEach(d=>{
+    const c=carga[d], p=c.pts/CAPACITY;
+    const bw=Math.min(p/1.35,1)*100, over=c.pts>CAPACITY;
+    const col=FILL_COLORS[bCls(p)];
+    const tags=(STUDIO_TAGS.includes(d)?'<span class="tag-st">Studio</span>':'')+
+               (OVERLAP_TAGS.includes(d)?'<span class="tag-ep">⚠ Época</span>':'');
+    const chips=c.jobs.map(j=>compChip(j.comp,j.label)).join('')||'<span class="chip">sem jobs</span>';
+    h+='<div class="drow"><div class="dtop"><div class="dname">'+d+' '+tags+'</div>'+
+       '<div class="dpts'+(over?' over':'')+'">'+c.pts+'pts'+(over?' ↑':'')+'</div></div>'+
+       '<div class="btrack"><div class="bfill" style="width:'+bw.toFixed(1)+'%;background:'+col+'"></div>'+
+       '<div class="bcap" style="left:'+(CP*100).toFixed(1)+'%"></div></div>'+
+       '<div class="chips">'+chips+'</div></div>';
+  });
+  document.getElementById('detail-inner').innerHTML=h;
+}
+
+/* ── Render TBD block ── */
+function renderTBD(){
+  const el=document.getElementById('tbd-block');
+  if(!tbdJobs.length){el.innerHTML='';return;}
+  let h='<div class="tbd-block"><div class="tbd-t">Sem alocação ('+tbdJobs.length+')</div>';
+  tbdJobs.forEach(r=>{const cl=['P','M','G','GG'].includes(r.comp)?'chip-'+r.comp:'';h+='<span class="tbd-chip">'+r.job+' <span class="chip '+cl+'" style="margin-left:3px">'+(r.comp||'?')+'</span></span>';});
+  el.innerHTML=h+'</div>';
+}
+
+/* ── Render Jobs por conta ── */
+function renderContas(){
+  const map={}, order=[];
+  RAW.forEach(r=>{if(!map[r.cliente]){map[r.cliente]=[];order.push(r.cliente);}map[r.cliente].push(r.job);});
+  const keys=[...new Set(order)];
+  const maxN=Math.max(...keys.map(k=>map[k].length),1);
+  const total=RAW.length;
+
+  /* Barras verticais */
+  let bh='<div class="vbar-wrap">';
+  keys.forEach((k,i)=>{
+    const n=map[k].length, ht=Math.round((n/maxN)*110);
+    const col=CONTA_COLORS[i%CONTA_COLORS.length];
+    bh+='<div class="vbar-col"><div class="vbar-val">'+n+'</div>'+
+        '<div class="vbar-bar" style="height:'+ht+'px;background:'+col+'"></div>'+
+        '<div class="vbar-label" title="'+k+'">'+k+'</div></div>';
+  });
+  bh+='</div><div class="vbar-axis"></div>';
+  document.getElementById('bars-inner').innerHTML=bh;
+
+  /* Donut */
+  const sz=140,cx=70,cy=70,r=52,sw=18,circ=2*Math.PI*r;
+  let off=0,paths='',leg='';
+  keys.forEach((k,i)=>{
+    const n=map[k].length, pct=n/total, dash=pct*circ;
+    const col=CONTA_COLORS[i%CONTA_COLORS.length];
+    paths+='<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="none" stroke="'+col+'" stroke-width="'+sw+'" '+
+           'stroke-dasharray="'+dash.toFixed(2)+' '+(circ-dash).toFixed(2)+'" '+
+           'stroke-dashoffset="'+(-off).toFixed(2)+'" transform="rotate(-90 '+cx+' '+cy+')" />';
+    off+=dash;
+    leg+='<div class="donut-item"><div class="donut-dot" style="background:'+col+'"></div>'+
+         '<span style="flex:1">'+k+'</span><strong>'+n+'</strong></div>';
+  });
+  const svg='<svg width="'+sz+'" height="'+sz+'" viewBox="0 0 '+sz+' '+sz+'">'+paths+
+             '<text x="'+cx+'" y="'+(cy+5)+'" text-anchor="middle" font-size="18" font-weight="600" fill="#1a1a18">'+total+'</text>'+
+             '<text x="'+cx+'" y="'+(cy+18)+'" text-anchor="middle" font-size="9" fill="#9a9893">jobs</text></svg>';
+  document.getElementById('donut-inner').innerHTML='<div class="donut-wrap">'+svg+'<div class="donut-legend">'+leg+'</div></div>';
+
+  /* Lista */
+  let lh='';
+  keys.forEach((k,i)=>{
+    const cbg=CONTA_BG[i%CONTA_BG.length], ccol=CONTA_COLORS[i%CONTA_COLORS.length];
+    lh+='<div class="crow"><div class="crow-name">'+k+'</div>'+
+        '<div class="crow-jobs">'+map[k].join(' · ')+'</div>'+
+        '<div class="crow-n" style="background:'+cbg+';color:'+ccol+'">'+map[k].length+'</div></div>';
+  });
+  document.getElementById('list-inner').innerHTML=lh;
+}
+
+/* ── Render Alertas ── */
+function renderAlertas(){
+  const today=new Date();today.setHours(0,0,0,0);
+  let h='';
+  duplas.forEach(d=>{
+    const c=carga[d];
+    if(c.pts>CAPACITY) h+=alert_('d','⚠','<strong>'+d+' acima da capacidade</strong>'+c.pts+'pts de '+CAPACITY+'pts — '+(c.pts-CAPACITY)+'pt(s) acima do limite.');
+    else if(c.pts/CAPACITY>0.85) h+=alert_('w','!','<strong>'+d+' próxima do teto</strong>'+c.pts+'pts de '+CAPACITY+'pts.');
+  });
+  const urg=RAW.filter(r=>{const d=pDate(r.dataFinal);if(!d)return false;const df=Math.ceil((d-today)/864e5);return df>=0&&df<=7;});
+  if(urg.length) h+=alert_('d','⏰','<strong>'+urg.length+' job(s) com entrega nos próximos 7 dias</strong>'+urg.map(r=>r.job+' ('+r.dataFinal+')').join(' · '));
+  if(RAW.some(r=>(r.cliente||'').includes('Época'))) h+=alert_('w','!','<strong>Época Cosméticos ativo (fora do fee)</strong>Job GG convocando múltiplas duplas da pauta regular.');
+  if(tbdJobs.length) h+=alert_('w','!','<strong>'+tbdJobs.length+' job(s) sem alocação definida</strong>'+tbdJobs.map(r=>r.job).join(', '));
+  if(!h) h=alert_('i','✓','<strong>Time dentro da capacidade</strong>Nenhuma dupla acima do teto no momento.');
+  document.getElementById('alertas').innerHTML=h;
+}
+function alert_(t,icon,body){return '<div class="alert al-'+t+'"><div class="al-icon">'+icon+'</div><div>'+body+'</div></div>';}
+
+/* ── Render Tabela ── */
+function renderTabela(){
+  let h='';
+  RAW.forEach(r=>{
+    const cl=['P','M','G','GG'].includes(r.comp)?'chip chip-'+r.comp:'chip';
+    h+='<tr data-cli="'+(r.cliente||'').toLowerCase()+'" data-dup="'+(r.dupla||'').toLowerCase()+'" data-cmp="'+(r.comp||'')+'" data-sts="'+(r.status||'').toLowerCase()+'" data-dat="'+(r.dataFinal||'')+'">';
+    h+='<td>'+r.cliente+'</td><td style="font-weight:500">'+r.job+'</td>';
+    h+='<td style="color:var(--text2)">'+(r.descricao||'').replace(/;/g,' · ')+'</td>';
+    h+='<td><span class="'+cl+'">'+(r.comp||'?')+'</span></td>';
+    h+='<td>'+(r.dupla||'TBD')+'</td><td>'+sBadge(r.status)+'</td>';
+    h+='<td>'+dCell(r.data1)+'</td><td>'+dCell(r.dataFinal)+'</td></tr>';
+  });
+  document.getElementById('tbody').innerHTML=h;
+  rebuildSelects();
+}
+
+/* ── Render tudo ── */
+function renderAll(){
+  renderKPIs(); renderSemaforo();
+  renderChart(); renderDetail(); renderTBD();
+  renderContas(); renderAlertas(); renderTabela();
+}
+
+/* ── Selects de filtro ── */
+function rebuildSelects(){
+  fillSelect('f-cli', [...new Set(RAW.map(r=>r.cliente))].filter(Boolean).sort());
+  fillSelect('f-sts', [...new Set(RAW.map(r=>r.status))].filter(Boolean).sort());
+  const fd=document.getElementById('f-dup');
+  const cur=fd.value;
+  while(fd.options.length>1) fd.remove(1);
+  [...new Set([...duplas,...allPersons])].sort().forEach(v=>{const o=new Option(v,v.toLowerCase());fd.appendChild(o);});
+  fd.value=cur;
+}
+function fillSelect(id,vals){
+  const s=document.getElementById(id); const cur=s.value;
+  while(s.options.length>1) s.remove(1);
+  vals.forEach(v=>{const o=new Option(v,v.toLowerCase());s.appendChild(o);});
+  s.value=cur;
+}
+
+/* ── Filtros ── */
+function filt(){
+  const fc=document.getElementById('f-cli').value;
+  const fd=document.getElementById('f-dup').value;
+  const fcmp=document.getElementById('f-cmp').value;
+  const fs=document.getElementById('f-sts').value;
+  const fdat=parseInt(document.getElementById('f-dat').value)||0;
+  const today=new Date();today.setHours(0,0,0,0);
+  const rows=document.querySelectorAll('#tbody tr');
+  let vis=0;
+  rows.forEach(tr=>{
+    let show=true;
+    if(fc&&!tr.dataset.cli.includes(fc))show=false;
+    if(fd&&!tr.dataset.dup.includes(fd))show=false;
+    if(fcmp&&tr.dataset.cmp!==fcmp)show=false;
+    if(fs&&!tr.dataset.sts.includes(fs))show=false;
+    if(fdat){const p=(tr.dataset.dat||'').split('/');if(p.length!==3)show=false;else{const d=new Date(+p[2],+p[1]-1,+p[0]);const df=Math.ceil((d-today)/864e5);if(df<0||df>fdat)show=false;}}
+    tr.classList.toggle('hr',!show);
+    if(show)vis++;
+  });
+  document.getElementById('fc').textContent=vis===rows.length?'':vis+' de '+rows.length+' jobs';
+  document.getElementById('no-r').style.display=vis===0?'block':'none';
+}
+function clearF(){['f-cli','f-dup','f-cmp','f-sts','f-dat'].forEach(id=>document.getElementById(id).value='');filt();}
+
+/* ── Ordenação ── */
+let sCol=-1,sAsc=true;
+function srt(col){
+  const tb=document.getElementById('tbody');
+  const rows=[...tb.querySelectorAll('tr')];
+  sAsc=sCol===col?!sAsc:true; sCol=col;
+  rows.sort((a,b)=>{
+    const av=(a.cells[col]?a.cells[col].textContent:'').trim();
+    const bv=(b.cells[col]?b.cells[col].textContent:'').trim();
+    if(col>=6){const da=av.split('/'),db=bv.split('/');if(da.length===3&&db.length===3){const na=new Date(da[2],da[1]-1,da[0]),nb=new Date(db[2],db[1]-1,db[0]);if(!isNaN(na)&&!isNaN(nb))return sAsc?na-nb:nb-na;}if(!av)return 1;if(!bv)return-1;}
+    return sAsc?av.localeCompare(bv,'pt-BR'):bv.localeCompare(av,'pt-BR');
+  });
+  rows.forEach(r=>tb.appendChild(r));
+  document.querySelectorAll('th').forEach((th,i)=>{th.classList.toggle('sorted',i===col);const s=th.querySelector('.sa');if(s)s.textContent=i===col?(sAsc?' ↑':' ↓'):' ↕';});
+}
+
+/* ── Toggle de views ── */
+function sv(panel,view,btn){
+  const prefix=panel===\'dupla\'?\'dupla-\':\'conta-\';
+  document.querySelectorAll('[id^="'+prefix+'"]').forEach(el=>el.classList.remove('on'));
+  const t=document.getElementById(prefix+view);if(t)t.classList.add('on');
+  btn.closest('.view-toggle').querySelectorAll('.vt').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+}
+
+/* ═════════════════════════════════════════════
+   POLLING SILENCIOSO — a cada 60 segundos
+   ═════════════════════════════════════════════ */
+/* ══ CONFIGURAÇÃO — substitua pelo ID da sua planilha ══
+   ID está na URL: docs.google.com/spreadsheets/d/SEU_ID/edit
+   A aba deve ser publicada: Arquivo > Compartilhar > Publicar na web > CSV
+*/
+const SHEET_ID  = 'SEU_SHEET_ID_AQUI';
+const SHEET_TAB = 'Pauta';
+const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/gviz/tq?tqx=out:csv&sheet=' + encodeURIComponent(SHEET_TAB);
+
+const POLL_MS=60000;
+let lastHash=JSON.stringify(RAW);
+let pollTimer=null, pollOn=true;
+
+function setSyncStatus(state){
+  const el=document.getElementById('sync-status');
+  if(!el)return;
+  if(state==='syncing'){el.textContent='⟳ Sincronizando...';el.style.color='var(--text3)';}
+  else if(state==='updated'){el.textContent='● Atualizado agora';el.style.color='var(--green)';setTimeout(()=>setSyncStatus('idle'),3000);}
+  else if(state==='error'){el.textContent='⚠ Erro ao sincronizar';el.style.color='var(--amber)';}
+  else{const n=new Date();el.textContent='Atualizado em '+n.toLocaleDateString('pt-BR')+' às '+n.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});el.style.color='var(--text3)';}
+}
+
+function manualRefresh(){
+  clearTimeout(pollTimer);
+  poll();
+}
+
+function parseCSV(text){
+  const lines = text.trim().split('\n').slice(1); // pula cabeçalho
+  return lines
+    .filter(l => l.trim())
+    .map(line => {
+      const cols = [];
+      let cur = '', inQ = false;
+      for(let i=0;i<line.length;i++){
+        const c=line[i];
+        if(c==='"'&&!inQ){inQ=true;}
+        else if(c==='"'&&inQ&&line[i+1]==='"'){cur+='"';i++;}
+        else if(c==='"'&&inQ){inQ=false;}
+        else if(c===','&&!inQ){cols.push(cur.trim());cur='';}
+        else{cur+=c;}
+      }
+      cols.push(cur.trim());
+      return {
+        cliente:  (cols[0]||'').trim(),
+        job:      (cols[1]||'').trim(),
+        descricao:(cols[2]||'').trim(),
+        comp:     (cols[3]||'').trim().toUpperCase(),
+        dupla:    (cols[4]||'').trim(),
+        status:   (cols[5]||'').trim(),
+        data1:    (cols[6]||'').trim(),
+        dataFinal:(cols[7]||'').trim(),
+      };
+    })
+    .filter(r => r.cliente && r.job);
+}
+
+async function poll(){
+  if(!pollOn)return;
+  setSyncStatus('syncing');
+  try{
+    const url = SHEET_CSV_URL + '&_t=' + Date.now();
+    const res = await fetch(url);
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const text = await res.text();
+    const newData = parseCSV(text);
+    const newHash = JSON.stringify(newData);
+    if(newHash!==lastHash){
+      lastHash=newHash;
+      RAW.length=0; newData.forEach(r=>RAW.push(r));
+      recalc(); renderAll();
+      setSyncStatus('updated');
+    } else {
+      setSyncStatus('idle');
+    }
+  }catch(e){
+    console.warn('Poll error:',e);
+    setSyncStatus('error');
+  }
+  pollTimer=setTimeout(poll,POLL_MS);
+}
+
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden){clearTimeout(pollTimer);pollOn=false;}
+  else{pollOn=true;poll();}
+});
+
+/* ── Detecção de mobile via largura real do documento ── */
+/* mobile via @container — sem JS necessário */
+
+/* ── Init ── */
+/* Carrega dados iniciais da planilha */
+(async function(){
+  try{
+    const res = await fetch(SHEET_CSV_URL);
+    if(res.ok){
+      const text = await res.text();
+      const data = parseCSV(text);
+      RAW.length=0; data.forEach(r=>RAW.push(r));
+      lastHash=JSON.stringify(data);
+    }
+  }catch(e){ console.warn('Init fetch error:',e); }
+  recalc();
+  renderAll();
+  setSyncStatus('idle');
+  pollTimer=setTimeout(poll,POLL_MS);
+})();
+/* ══ PWA — manifesto dinâmico + nav mobile ══ */
+(function(){
+  /* Manifesto inline (evita problema de URL do Apps Script) */
+  const manifest = {
+    name: 'Pauta de Criação — Ogilvy Brasil',
+    short_name: 'Pauta Ogilvy',
+    description: 'Dashboard de pauta do time de criação — Núcleo Magalu',
+    start_url: location.href,
+    display: 'standalone',
+    background_color: '#f5f4f0',
+    theme_color: '#f5f4f0',
+    icons: [
+      { src: 'https://www.google.com/images/about/appsuite/images/logo_192.png', sizes: '192x192', type: 'image/png' },
+    ]
+  };
+  const blob = new Blob([JSON.stringify(manifest)], {type:'application/json'});
+  const url  = URL.createObjectURL(blob);
+  const el   = document.getElementById('pwa-manifest');
+  if(el) el.href = url;
+})();
+
+/* Navegação mobile — scroll suave até a seção */
+function mnavGo(id, btn){
+  const el = document.getElementById(id);
+  if(el) el.scrollIntoView({behavior:'smooth', block:'start'});
+  document.querySelectorAll('.mnav-btn').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+}
+
+/* Atualiza o botão ativo da nav conforme o scroll */
+(function(){
+  const sections = ['kpi-grid','sec-time','sec-alertas','sec-pauta'];
+  let ticking = false;
+  window.addEventListener('scroll', ()=>{
+    if(ticking) return;
+    ticking = true;
+    requestAnimationFrame(()=>{
+      const scrollY = window.scrollY + 80;
+      let active = sections[0];
+      sections.forEach(id=>{
+        const el = document.getElementById(id);
+        if(el && el.offsetTop <= scrollY) active = id;
+      });
+      document.querySelectorAll('.mnav-btn').forEach((btn,i)=>{
+        btn.classList.toggle('active', sections[i]===active);
+      });
+      ticking = false;
+    });
+  }, {passive:true});
+})();
+
+</script>
+</body>
+</html>
